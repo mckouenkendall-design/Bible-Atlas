@@ -1,0 +1,216 @@
+<title>Bible Atlas</title>
+<style>
+/* Layout: one full-screen 3D view with thin glass controls laid over its edges. */
+:root {
+  color-scheme: dark;
+  --night: #070b16;
+  --glass: rgba(11, 19, 36, 0.66);
+  --glass-strong: rgba(9, 15, 29, 0.9);
+  --line: rgba(255, 240, 205, 0.2);
+  --text: #f4eedd;
+  --muted: #b8b5a6;
+  --gold: #f0c869;
+  --gold-ink: #2a1f06;
+  --water: #a9d9ee;
+  --veil: #f4f8fb;
+  --display: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --st: env(safe-area-inset-top, 0px);
+  --sb: env(safe-area-inset-bottom, 0px);
+  --sl: env(safe-area-inset-left, 0px);
+  --sr: env(safe-area-inset-right, 0px);
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; overflow: hidden; background: var(--night); color: var(--text); font: 14px/1.4 var(--ui); overscroll-behavior: none; }
+body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; outline: none; }
+#veil { position: fixed; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(120% 90% at 50% 55%, #ffffff 0%, var(--veil) 55%, #dfe9f1 100%); }
+#veil-note { position: fixed; left: 0; right: 0; top: 50%; text-align: center; font: italic 16px var(--display); color: #51606e; pointer-events: none; opacity: 0; transition: opacity .4s; }
+
+button { font: inherit; color: inherit; cursor: pointer; }
+.btn { min-height: 38px; padding: 0 13px; border: 1px solid var(--line); border-radius: 10px; background: var(--glass); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); white-space: nowrap; font-weight: 550; letter-spacing: .01em; }
+.btn:active, .btn[aria-pressed="true"] { background: var(--gold); color: var(--gold-ink); border-color: var(--gold); }
+.btn:focus-visible, .chip:focus-visible, .tab:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.btn.round { width: 38px; padding: 0; border-radius: 50%; font-weight: 700; }
+
+.hud { position: fixed; inset: 0; pointer-events: none; }
+.hud > * { pointer-events: auto; }
+.bar { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 8px; padding: calc(var(--st) + 10px) calc(var(--sr) + 12px) 0 calc(var(--sl) + 12px); pointer-events: none; }
+.bar > * { pointer-events: auto; }
+.grow { flex: 1; min-width: 0; }
+.brand { font: 600 19px/1 var(--display); letter-spacing: .02em; text-shadow: 0 1px 12px rgba(0,0,0,.6); display: flex; align-items: baseline; gap: 8px; pointer-events: none; }
+.brand small { font: 600 10px var(--ui); letter-spacing: .14em; text-transform: uppercase; color: var(--gold); }
+.seg { display: flex; }
+.seg .btn:first-child { border-radius: 10px 0 0 10px; }
+.seg .btn:last-child { border-radius: 0 10px 10px 0; border-left: 0; }
+.where { min-width: 0; pointer-events: none; padding: 5px 12px 6px; border-radius: 10px; background: var(--glass); border: 1px solid var(--line); }
+.where b { display: block; font: 600 15px/1.15 var(--display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.where span { display: block; font-size: 10.5px; color: var(--gold); white-space: nowrap; }
+
+.hint { position: absolute; left: 50%; bottom: calc(var(--sb) + 14px); transform: translateX(-50%); padding: 8px 14px; border-radius: 999px; background: var(--glass); border: 1px solid var(--line); font-size: 13px; text-align: center; max-width: calc(100% - 32px); transition: opacity .6s; pointer-events: none; }
+.hint.off { opacity: 0; }
+.zoom { position: absolute; right: calc(var(--sr) + 12px); bottom: calc(var(--sb) + 14px); display: flex; flex-direction: column; gap: 8px; }
+
+/* place names and pins on the globe */
+#labels { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+.lab { position: absolute; left: 0; top: 0; white-space: nowrap; font: 12px var(--ui); color: rgba(255,255,255,.92); text-shadow: 0 1px 3px rgba(0,0,0,.75), 0 0 8px rgba(0,0,0,.45); transition: opacity .35s; opacity: 0; will-change: transform; }
+.lab.land { font: 600 12px var(--ui); letter-spacing: .2em; text-transform: uppercase; color: rgba(255,250,236,.9); }
+.lab.sea, .lab.water { font: italic 13px var(--display); color: var(--water); }
+.lab.town { font-weight: 600; padding-left: 10px; }
+.lab.town::before { content: ""; position: absolute; left: 0; top: 50%; width: 5px; height: 5px; margin-top: -3px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1.5px rgba(0,0,0,.5); }
+.chip { position: absolute; left: 0; top: 0; pointer-events: auto; padding: 7px 12px 7px 11px; border-radius: 12px 12px 12px 3px; background: var(--glass-strong); border: 1px solid var(--gold); text-align: left; transition: opacity .3s; will-change: transform; box-shadow: 0 6px 22px rgba(0,0,0,.4); }
+.chip b { display: block; font: 600 15px/1.15 var(--display); color: var(--text); }
+.chip span { display: block; font-size: 11px; color: var(--gold); margin-top: 2px; }
+
+/* scene controls */
+#stick { position: absolute; width: 112px; height: 112px; margin: -56px 0 0 -56px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,.4); background: rgba(10,18,34,.22); pointer-events: none; opacity: .75; transition: opacity .25s; }
+#stick.live { opacity: 1; background: rgba(10,18,34,.36); }
+#knob { position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px; border-radius: 50%; background: rgba(255,255,255,.82); box-shadow: 0 2px 10px rgba(0,0,0,.35); }
+#stick small { position: absolute; left: 50%; top: 100%; transform: translate(-50%, 6px); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.85); text-shadow: 0 1px 4px rgba(0,0,0,.7); white-space: nowrap; }
+#vert { position: absolute; right: calc(var(--sr) + 14px); bottom: calc(var(--sb) + 16px); display: flex; flex-direction: column; gap: 10px; }
+#vert .btn { width: 52px; height: 52px; border-radius: 50%; padding: 0; font-size: 18px; }
+#look-tip { position: absolute; right: calc(var(--sr) + 90px); bottom: calc(var(--sb) + 78px); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.85); text-shadow: 0 1px 4px rgba(0,0,0,.7); pointer-events: none; transition: opacity .6s; }
+body.mouse #stick, body.mouse #look-tip { display: none; }
+body:not(.mouse) .zoom, body:not(.mouse) #hint-scene { display: none; }
+body.mouse .only-touch, body:not(.mouse) .only-mouse { display: none; }
+
+#turn { display: none; position: fixed; left: 50%; top: calc(var(--st) + 58px); transform: translateX(-50%); padding: 6px 12px; border-radius: 999px; background: var(--glass); border: 1px solid var(--line); font-size: 12px; white-space: nowrap; pointer-events: none; }
+@media (orientation: portrait) and (max-width: 600px) { #turn { display: block; } }
+#caption { position: fixed; left: 0; right: 0; top: 30%; text-align: center; pointer-events: none; opacity: 0; transition: opacity 1.2s; text-shadow: 0 2px 22px rgba(0,0,0,.6), 0 0 2px rgba(0,0,0,.5); padding: 0 16px; }
+#caption.on { opacity: 1; }
+#caption b { display: block; font: 600 clamp(26px, 5.2vw, 46px)/1.1 var(--display); text-wrap: balance; }
+#caption span { display: block; margin-top: 8px; font-size: 12px; letter-spacing: .22em; text-transform: uppercase; color: var(--gold); }
+
+/* scripture panel */
+#panel { position: fixed; top: 0; right: 0; bottom: 0; width: min(440px, 94vw); background: var(--glass-strong); border-left: 1px solid var(--line); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); display: flex; flex-direction: column; transform: translateX(102%); transition: transform .32s ease; -webkit-user-select: text; user-select: text; }
+#panel.open { transform: none; }
+.panel-top { display: flex; align-items: center; gap: 6px; padding: calc(var(--st) + 10px) calc(var(--sr) + 12px) 8px 16px; border-bottom: 1px solid var(--line); }
+.tab { min-height: 36px; padding: 0 12px; border: 0; border-radius: 8px; background: none; color: var(--muted); font-weight: 600; }
+.tab[aria-selected="true"] { color: var(--gold-ink); background: var(--gold); }
+.panel-body { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 16px 20px calc(var(--sb) + 28px) 20px; overscroll-behavior: contain; }
+.panel-body h2 { font: 600 22px/1.2 var(--display); margin: 0 0 2px; text-wrap: balance; }
+.panel-body h3 { font: 600 11px var(--ui); letter-spacing: .16em; text-transform: uppercase; color: var(--gold); margin: 22px 0 8px; }
+.panel-body .ver { font-size: 12px; color: var(--muted); margin: 0 0 14px; }
+.verse { font: 17px/1.55 var(--display); margin: 0 0 10px; max-width: 34em; }
+.verse sup { font: 600 10px var(--ui); color: var(--gold); margin-right: 6px; vertical-align: 5px; letter-spacing: .04em; }
+.outline { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.outline li { display: grid; grid-template-columns: 5.2em 1fr; gap: 8px; font: 15px/1.4 var(--display); }
+.outline li i { font: 600 11px/1.9 var(--ui); color: var(--gold); font-style: normal; font-variant-numeric: tabular-nums; }
+.notes { margin: 0; padding-left: 18px; display: grid; gap: 8px; font-size: 14px; line-height: 1.5; color: #e7e1d0; max-width: 36em; }
+
+#help { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(4,8,16,.6); padding: 16px; }
+.card { width: min(680px, 100%); max-height: 100%; overflow: auto; background: var(--glass-strong); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px 20px; }
+.card h2 { font: 600 20px var(--display); margin: 0 0 12px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px 26px; }
+.cols h3 { font: 600 11px var(--ui); letter-spacing: .16em; text-transform: uppercase; color: var(--gold); margin: 0 0 8px; }
+.cols dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 5px 12px; font-size: 13px; line-height: 1.4; }
+.cols dt { color: var(--text); font-weight: 600; white-space: nowrap; }
+.cols dd { margin: 0; color: var(--muted); }
+.cols p { margin: 10px 0 0; font-size: 12px; color: var(--muted); }
+
+#loading { position: fixed; inset: 0; display: grid; place-items: center; background: var(--night); transition: opacity .7s; text-align: center; }
+#loading b { display: block; font: 600 28px var(--display); }
+#loading span { display: block; margin-top: 10px; font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--gold); }
+#loading.err span { color: #ffb4a8; letter-spacing: 0; text-transform: none; font-size: 14px; max-width: 32em; padding: 0 20px; }
+
+@media (max-width: 900px) { .where { display: none; } .btn { padding: 0 10px; } }
+@media (max-width: 560px) { .brand small { display: none; } #hud-scene .bar { flex-wrap: wrap; } #hud-scene .grow { display: none; } #turn { top: calc(var(--st) + 104px); } }
+@media (prefers-reduced-motion: reduce) { #panel, .lab, .chip, .hint { transition: none; } }
+</style>
+
+<canvas id="c" tabindex="0" aria-label="3D view. Drag to look around."></canvas>
+<div id="labels" aria-hidden="false"></div>
+
+<div id="hud-globe" class="hud">
+  <div class="bar">
+    <div class="brand">Bible Atlas <small>prototype</small></div>
+    <div class="grow"></div>
+    <button class="btn" id="btn-home">Holy Land</button>
+    <button class="btn round" id="btn-help-g" aria-label="Show controls">?</button>
+  </div>
+  <div class="hint" id="hint-globe">Drag to spin. Pinch or scroll to zoom. Tap the gold pin.</div>
+  <div class="zoom">
+    <button class="btn round" id="btn-zin" aria-label="Zoom in">+</button>
+    <button class="btn round" id="btn-zout" aria-label="Zoom out">&minus;</button>
+  </div>
+</div>
+
+<div id="hud-scene" class="hud" hidden>
+  <div class="bar">
+    <button class="btn" id="btn-back">&lsaquo; Globe</button>
+    <div class="where"><b id="where-title"></b><span id="where-sub"></span></div>
+    <div class="grow"></div>
+    <div class="seg" role="group" aria-label="Camera mode">
+      <button class="btn" id="btn-fly" aria-pressed="true">Fly</button>
+      <button class="btn" id="btn-walk" aria-pressed="false">Walk</button>
+    </div>
+    <button class="btn" id="btn-over">Overhead</button>
+    <button class="btn" id="btn-reset">Reset</button>
+    <button class="btn" id="btn-scripture">Scripture</button>
+    <button class="btn round" id="btn-help-s" aria-label="Show controls">?</button>
+  </div>
+  <div class="hint" id="hint-scene">W A S D to move. Drag to look. E and Q to rise and descend.</div>
+  <div id="stick"><div id="knob"></div><small>Move</small></div>
+  <div id="look-tip">Drag to look</div>
+  <div id="vert">
+    <button class="btn" id="btn-up" aria-label="Rise">&#9650;</button>
+    <button class="btn" id="btn-down" aria-label="Descend">&#9660;</button>
+  </div>
+</div>
+
+<div id="turn">Turn your phone sideways for the best view</div>
+<div id="caption"><b id="cap-title"></b><span id="cap-sub"></span></div>
+<div id="veil"></div>
+<div id="veil-note">Preparing the hillside</div>
+
+<aside id="panel" aria-label="Scripture and notes" hidden>
+  <div class="panel-top" role="tablist">
+    <button class="tab" role="tab" id="tab-text" aria-selected="true">Scripture</button>
+    <button class="tab" role="tab" id="tab-notes" aria-selected="false">About this scene</button>
+    <div class="grow"></div>
+    <button class="btn round" id="btn-close" aria-label="Close panel">&times;</button>
+  </div>
+  <div class="panel-body" id="panel-body"></div>
+</aside>
+
+<div id="help" hidden>
+  <div class="card">
+    <h2>Controls <button class="btn round" id="btn-help-x" aria-label="Close controls">&times;</button></h2>
+    <div class="cols">
+      <div>
+        <h3>On the globe</h3>
+        <dl>
+          <dt>Drag</dt><dd>Spin the Earth</dd>
+          <dt>Pinch or scroll</dt><dd>Zoom in and out</dd>
+          <dt>Tap the gold pin</dt><dd>Fly down into that place</dd>
+          <dt>Holy Land</dt><dd>Return to the region</dd>
+          <dt>Arrow keys, + and &minus;</dt><dd>Spin and zoom from a keyboard</dd>
+        </dl>
+      </div>
+      <div class="only-touch">
+        <h3>In a scene, on a phone</h3>
+        <dl>
+          <dt>Left thumb</dt><dd>Move. Touch anywhere on the left side and slide.</dd>
+          <dt>Right thumb</dt><dd>Look around. Drag anywhere on the right side.</dd>
+          <dt>&#9650; &#9660;</dt><dd>Rise and descend while flying</dd>
+          <dt>Fly / Walk</dt><dd>Free camera, or on foot among the crowd</dd>
+          <dt>Overhead</dt><dd>Jump to a bird's-eye view</dd>
+        </dl>
+      </div>
+      <div class="only-mouse">
+        <h3>In a scene, on a computer</h3>
+        <dl>
+          <dt>W A S D</dt><dd>Move</dd>
+          <dt>Mouse drag or arrows</dt><dd>Look around</dd>
+          <dt>E / Q</dt><dd>Rise and descend while flying</dd>
+          <dt>Scroll</dt><dd>Move toward where you are looking</dd>
+          <dt>Shift</dt><dd>Move faster</dd>
+          <dt>F &middot; B &middot; R &middot; G</dt><dd>Fly or walk, overhead, reset view, back to globe</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="loading"><div><b>Bible Atlas</b><span id="loading-note">Drawing the Earth</span></div></div>
+<script>/*__SCRIPT__*/</script>

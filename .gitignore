@@ -1,0 +1,5 @@
+node_modules/
+raw/
+dist/
+test/shots/
+test/*.log

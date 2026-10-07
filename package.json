@@ -1,0 +1,22 @@
+{
+  "name": "bible-atlas",
+  "version": "1.0.0",
+  "description": "Explorable 3D Bible atlas prototype",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node test/run.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "esbuild": "^0.28.2",
+    "playwright": "^1.56.0",
+    "three": "^0.186.1"
+  },
+  "private": true,
+  "type": "module"
+}
